@@ -1,0 +1,7 @@
+numpy>=1.19.5
+pandas>=1.1.5
+scikit-learn>=0.24.2
+tensorflow>=2.4.0  # Or tensorflow-cpu if no GPU
+matplotlib>=3.3.4
+seaborn>=0.11.1
+imbalanced-learn>=0.8.0 # For handling class imbalance (SMOTE)

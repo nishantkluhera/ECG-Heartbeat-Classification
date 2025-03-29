@@ -1,0 +1,33 @@
+ecg-heartbeat-classifier/
+│
+├── .gitignore
+├── README.md
+├── requirements.txt
+│
+├── data/                      # Data files (or instructions to download)
+│   ├── .gitkeep               # Keep directory in git even if empty
+│   └── mitbih_test.csv        # Example: Test dataset
+│   └── mitbih_train.csv       # Example: Training dataset
+│   └── (Download instructions in README)
+│
+├── notebooks/                 # Jupyter notebooks for exploration/visualization (Optional)
+│   ├── 1_Data_Exploration.ipynb
+│   └── 2_Model_Training_Experiments.ipynb
+│
+├── saved_models/              # Trained model files (added to .gitignore)
+│   └── .gitkeep
+│
+├── src/                       # Source code
+│   ├── __init__.py
+│   ├── config.py              # Configuration variables (paths, parameters)
+│   ├── data_loader.py         # Functions to load and preprocess data
+│   ├── model.py               # Model definition (CNN)
+│   ├── train.py               # Script to train the model
+│   ├── evaluate.py            # Script to evaluate the model
+│   └── predict.py             # Script/function for making predictions (Optional)
+│   └── utils.py               # Utility functions (e.g., plotting)
+│
+└── visualizations/            # Saved plots/images (Optional)
+    └── .gitkeep
+    └── confusion_matrix.png
+    └── training_history.png
