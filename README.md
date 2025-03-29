@@ -60,29 +60,33 @@ ecg-heartbeat-classifier/
 ├── README.md
 ├── requirements.txt
 │
-├── data/ # Dataset files (Download manually)
-│ ├── .gitkeep
-│ └── mitbih_*.csv
+├── data/                      # Data files (or instructions to download)
+│   ├── .gitkeep               # Keep directory in git even if empty
+│   └── mitbih_test.csv        # Example: Test dataset
+│   └── mitbih_train.csv       # Example: Training dataset
+│   └── (Download instructions in README)
 │
-├── notebooks/ # (Optional) Jupyter notebooks
-│ └── *.ipynb
+├── notebooks/                 # Jupyter notebooks for exploration/visualization (Optional)
+│   ├── 1_Data_Exploration.ipynb
+│   └── 2_Model_Training_Experiments.ipynb
 │
-├── saved_models/ # Saved trained model(s)
-│ └── .gitkeep
+├── saved_models/              # Trained model files (added to .gitignore)
+│   └── .gitkeep
 │
-├── src/ # Source code
-│ ├── init.py
-│ ├── config.py # Configuration (paths, parameters)
-│ ├── data_loader.py # Data loading and preprocessing
-│ ├── model.py # CNN model definition
-│ ├── train.py # Training script
-│ ├── evaluate.py # Evaluation script
-│ ├── predict.py # Prediction script/functions
-│ └── utils.py # Utility functions (plotting)
+├── src/                       # Source code
+│   ├── __init__.py
+│   ├── config.py              # Configuration variables (paths, parameters)
+│   ├── data_loader.py         # Functions to load and preprocess data
+│   ├── model.py               # Model definition (CNN)
+│   ├── train.py               # Script to train the model
+│   ├── evaluate.py            # Script to evaluate the model
+│   └── predict.py             # Script/function for making predictions (Optional)
+│   └── utils.py               # Utility functions (e.g., plotting)
 │
-└── visualizations/ # Saved plots (e.g., confusion matrix)
-└── .gitkeep
-└── *.png
+└── visualizations/            # Saved plots/images (Optional)
+    └── .gitkeep
+    └── confusion_matrix.png
+    └── training_history.png
 ## Setup and Installation
 
 1.  **Clone the repository:**
