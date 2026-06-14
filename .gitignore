@@ -158,3 +158,26 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+.vscode/
+
+# ------------------------------------------------------------------ #
+# Project-specific
+# ------------------------------------------------------------------ #
+# Dataset CSVs are large (~490 MB) - download them per the README instead.
+# Anchored rule for the canonical location plus a catch-all for the MIT-BIH
+# files anywhere in the tree (guards against stray/duplicate copies).
+data/*.csv
+**/mitbih_*.csv
+src/data/
+
+# Trained model checkpoints and the fitted scaler (regenerable via training).
+saved_models/*.pt
+saved_models/*.joblib
+
+# Keep the visualization PNGs tracked (they showcase results in the README),
+# but ignore any other scratch images.
+visualizations/*
+!visualizations/.gitkeep
+!visualizations/confusion_matrix.png
+!visualizations/training_history.png
+

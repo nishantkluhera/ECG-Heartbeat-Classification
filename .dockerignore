@@ -1,0 +1,12 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+data/*.csv
+saved_models/*.pt
+saved_models/*.joblib
+visualizations/*.png
+.pytest_cache/
+notebooks/.ipynb_checkpoints/

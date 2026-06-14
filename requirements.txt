@@ -1,7 +1,20 @@
-numpy>=1.19.5
-pandas>=1.1.5
-scikit-learn>=0.24.2
-tensorflow>=2.4.0  # Or tensorflow-cpu if no GPU
-matplotlib>=3.3.4
-seaborn>=0.11.1
-imbalanced-learn>=0.8.0 # For handling class imbalance (SMOTE)
+# Core scientific stack
+numpy>=1.23
+pandas>=1.5
+scikit-learn>=1.1
+imbalanced-learn>=0.10   # SMOTE for class imbalance
+matplotlib>=3.6
+seaborn>=0.12
+joblib>=1.2              # persist the fitted StandardScaler
+
+# Deep learning (PyTorch)
+# NOTE: the line below installs the CPU build from PyPI. For NVIDIA GPU
+# (CUDA) acceleration, install a CUDA build instead, e.g.:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+torch>=2.0
+
+# Interactive demo
+streamlit>=1.30
+
+# Testing
+pytest>=7.0

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ecg-heartbeat-classifier"
+version = "1.0.0"
+description = "1D CNN (PyTorch) for ECG heartbeat arrhythmia classification on the MIT-BIH dataset"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "Nishant Luhera" }]
+dependencies = [
+    "numpy>=1.23",
+    "pandas>=1.5",
+    "scikit-learn>=1.1",
+    "imbalanced-learn>=0.10",
+    "matplotlib>=3.6",
+    "seaborn>=0.12",
+    "joblib>=1.2",
+    "torch>=2.0",
+]
+
+[project.optional-dependencies]
+app = ["streamlit>=1.30"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+ecg-classify = "src.cli:main"
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
