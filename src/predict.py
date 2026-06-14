@@ -1,127 +1,101 @@
-import numpy as np
-import tensorflow as tf
-import pandas as pd
-from sklearn.preprocessing import StandardScaler
+"""Single-heartbeat inference.
+
+Loads the trained model and the *saved* scaler once, then classifies raw ECG
+segments of shape (N_FEATURES,). Because the scaler is the same object fitted
+during training, inputs are normalised exactly as the model expects.
+"""
 import logging
+import os
 
-from src.config import MODEL_PATH, N_FEATURES, CLASS_MAP, TRAIN_CSV # Need TRAIN_CSV to fit scaler
+import numpy as np
+import torch
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from src.config import MODEL_PATH, SCALER_PATH, N_FEATURES, CLASS_MAP, CLASS_NAMES
+from src.data_loader import load_scaler, preprocess_signal
+from src.model import load_trained_model
 
-# Global variables for model and scaler (load once)
-model = None
-scaler = None
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def load_prediction_resources():
-    """Loads the trained model and the scaler."""
-    global model, scaler
-    if model is None:
-        try:
-            model = tf.keras.models.load_model(MODEL_PATH)
-            logging.info(f"Model loaded successfully from {MODEL_PATH}")
-        except Exception as e:
-            logging.error(f"Error loading model: {e}. Cannot make predictions.")
-            return False
+# Cached resources (loaded lazily, once).
+_model = None
+_scaler = None
+_device = None
 
-    if scaler is None:
-        try:
-            # We need to fit the scaler exactly as it was during training.
-            # Ideally, the scaler object should be saved during training.
-            # Here, we refit it on the training data for simplicity.
-            df_train = pd.read_csv(TRAIN_CSV, header=None)
-            X_train_raw = df_train.iloc[:, :N_FEATURES].values
-            scaler = StandardScaler()
-            scaler.fit(X_train_raw) # Fit on the raw 2D training data
-            logging.info("Scaler fitted on training data.")
-        except FileNotFoundError:
-             logging.error(f"Training data file {TRAIN_CSV} not found. Cannot fit scaler.")
-             return False
-        except Exception as e:
-             logging.error(f"Error fitting scaler: {e}")
-             return False
+
+def load_prediction_resources() -> bool:
+    """Load and cache the model + scaler. Returns True on success."""
+    global _model, _scaler, _device
+    if _model is not None and _scaler is not None:
+        return True
+
+    if not os.path.exists(MODEL_PATH):
+        logging.error(f"No trained model at {MODEL_PATH}. Run `python main.py train` first.")
+        return False
+    if not os.path.exists(SCALER_PATH):
+        logging.error(f"No saved scaler at {SCALER_PATH}. Re-run training to produce it.")
+        return False
+
+    _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    _model = load_trained_model(MODEL_PATH, device=_device)
+    _scaler = load_scaler(SCALER_PATH)
     return True
 
 
-def predict_heartbeat(ecg_signal_segment):
-    """
-    Predicts the class of a single ECG heartbeat segment.
+@torch.no_grad()
+def predict_heartbeat(ecg_signal_segment: np.ndarray):
+    """Classify a single ECG segment.
 
     Args:
-        ecg_signal_segment (numpy.ndarray): A 1D numpy array of shape (N_FEATURES,)
-                                           representing the ECG segment.
+        ecg_signal_segment: 1D array of shape (N_FEATURES,).
 
     Returns:
-        str: The predicted class name (e.g., 'Normal', 'Ventricular').
-        float: The confidence score for the prediction.
-        None: If prediction fails.
+        (class_name, confidence) on success, else (None, None).
     """
-    global model, scaler
-    if model is None or scaler is None:
-        if not load_prediction_resources():
-            return None, None
-
-    if ecg_signal_segment.shape != (N_FEATURES,):
-        logging.error(f"Input signal must have shape ({N_FEATURES},). Received shape {ecg_signal_segment.shape}")
+    if not load_prediction_resources():
         return None, None
 
     try:
-        # 1. Reshape for scaler (needs 2D) and scale
-        segment_scaled = scaler.transform(ecg_signal_segment.reshape(1, -1))
-
-        # 2. Reshape for CNN (needs 3D: samples, timesteps, features)
-        segment_reshaped = segment_scaled.reshape(1, N_FEATURES, 1)
-
-        # 3. Predict
-        pred_probs = model.predict(segment_reshaped)[0] # Get probabilities for the first (only) sample
-        pred_class_idx = np.argmax(pred_probs)
-        pred_confidence = pred_probs[pred_class_idx]
-
-        # 4. Map index to class name
-        pred_class_name = CLASS_MAP.get(pred_class_idx, 'Unknown Error')
-
-        logging.info(f"Prediction: {pred_class_name}, Confidence: {pred_confidence:.4f}")
-        return pred_class_name, pred_confidence
-
-    except Exception as e:
+        x = preprocess_signal(ecg_signal_segment, _scaler)        # (1, 1, N_FEATURES)
+        x = torch.as_tensor(x, dtype=torch.float32, device=_device)
+        probs = torch.softmax(_model(x), dim=1)[0].cpu().numpy()
+        idx = int(np.argmax(probs))
+        confidence = float(probs[idx])
+        class_name = CLASS_NAMES[idx] if idx < len(CLASS_NAMES) else CLASS_MAP.get(idx, "Unknown")
+        logging.info(f"Prediction: {class_name} (confidence {confidence:.4f})")
+        return class_name, confidence
+    except Exception as e:  # noqa: BLE001 - surface any inference error to the caller
         logging.error(f"Error during prediction: {e}")
         return None, None
 
-if __name__ == '__main__':
-    # Example Usage:
-    print("Attempting to load prediction resources...")
-    if load_prediction_resources():
-        print("Resources loaded.")
-        # Create a dummy ECG segment (replace with actual data)
-        # Ensure this dummy data has the correct number of features (e.g., 187)
-        dummy_ecg = np.random.rand(N_FEATURES) * 0.5 # Example random signal
 
-        print(f"\nPredicting class for a dummy ECG segment (shape {dummy_ecg.shape})...")
-        predicted_class, confidence = predict_heartbeat(dummy_ecg)
+@torch.no_grad()
+def predict_proba(ecg_signal_segment: np.ndarray):
+    """Return the full class-probability vector for a single segment (or None)."""
+    if not load_prediction_resources():
+        return None
+    x = preprocess_signal(ecg_signal_segment, _scaler)
+    x = torch.as_tensor(x, dtype=torch.float32, device=_device)
+    return torch.softmax(_model(x), dim=1)[0].cpu().numpy()
 
-        if predicted_class:
-            print(f"==> Predicted Heartbeat Class: {predicted_class} (Confidence: {confidence:.2f})")
-        else:
-            print("==> Prediction failed.")
 
-        # Example loading from the test set (if available)
-        try:
-            df_test = pd.read_csv('data/mitbih_test.csv', header=None)
-            sample_ecg = df_test.iloc[100, :N_FEATURES].values # Take 100th sample
-            actual_class_idx = int(df_test.iloc[100, N_FEATURES])
-            actual_class_name = CLASS_MAP.get(actual_class_idx, 'Unknown')
+if __name__ == "__main__":
+    print("Loading prediction resources...")
+    if not load_prediction_resources():
+        print("Failed to load resources. Train the model first: python main.py train")
+        raise SystemExit(1)
 
-            print(f"\nPredicting class for a sample ECG segment from test set (Actual: {actual_class_name})...")
-            predicted_class, confidence = predict_heartbeat(sample_ecg)
+    # Demo on a random segment.
+    dummy = np.random.rand(N_FEATURES).astype(np.float32)
+    name, conf = predict_heartbeat(dummy)
+    print(f"Random segment -> {name} (confidence {conf:.2f})")
 
-            if predicted_class:
-                print(f"==> Predicted Heartbeat Class: {predicted_class} (Confidence: {confidence:.2f})")
-            else:
-                print("==> Prediction failed.")
+    # Demo on a real test sample, if available.
+    import pandas as pd
+    from src.config import TEST_CSV
 
-        except FileNotFoundError:
-            print("\nTest CSV not found, skipping prediction test on real data.")
-        except Exception as e:
-            print(f"\nError running prediction on test sample: {e}")
-
-    else:
-        print("Failed to load resources. Prediction unavailable.")
+    if os.path.exists(TEST_CSV):
+        df = pd.read_csv(TEST_CSV, header=None)
+        sample = df.iloc[100, :N_FEATURES].values
+        actual = CLASS_NAMES[int(df.iloc[100, N_FEATURES])]
+        name, conf = predict_heartbeat(sample)
+        print(f"Test sample (actual: {actual}) -> {name} (confidence {conf:.2f})")
