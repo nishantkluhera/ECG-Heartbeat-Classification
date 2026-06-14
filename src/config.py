@@ -1,49 +1,64 @@
+"""Central configuration for the ECG Heartbeat Classification project.
+
+Kept intentionally free of heavy imports (no torch) so that lightweight
+utilities such as the synthetic-data generator and unit tests can import it
+without pulling in the deep-learning stack.
+"""
 import os
 
-# Data paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # Project root
-DATA_DIR = os.path.join(BASE_DIR, 'data')
-TRAIN_CSV = os.path.join(DATA_DIR, 'mitbih_train.csv')
-TEST_CSV = os.path.join(DATA_DIR, 'mitbih_test.csv')
+# --------------------------------------------------------------------------- #
+# Paths
+# --------------------------------------------------------------------------- #
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # project root
+DATA_DIR = os.path.join(BASE_DIR, "data")
+TRAIN_CSV = os.path.join(DATA_DIR, "mitbih_train.csv")
+TEST_CSV = os.path.join(DATA_DIR, "mitbih_test.csv")
 
-# Model saving path
-MODEL_SAVE_DIR = os.path.join(BASE_DIR, 'saved_models')
-MODEL_NAME = 'ecg_cnn_classifier.keras' # Use .keras for TF >= 2.7
+MODEL_SAVE_DIR = os.path.join(BASE_DIR, "saved_models")
+MODEL_NAME = "ecg_cnn_classifier.pt"          # PyTorch checkpoint
 MODEL_PATH = os.path.join(MODEL_SAVE_DIR, MODEL_NAME)
+SCALER_NAME = "scaler.joblib"                  # fitted StandardScaler (saved during training)
+SCALER_PATH = os.path.join(MODEL_SAVE_DIR, SCALER_NAME)
 
-# Visualization path
-VISUALIZATION_DIR = os.path.join(BASE_DIR, 'visualizations')
-os.makedirs(VISUALIZATION_DIR, exist_ok=True)
+VISUALIZATION_DIR = os.path.join(BASE_DIR, "visualizations")
+
+# Create output directories up-front so downstream code can write freely.
 os.makedirs(MODEL_SAVE_DIR, exist_ok=True)
+os.makedirs(VISUALIZATION_DIR, exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 
-# Data parameters
-# The MIT-BIH CSV dataset often has 187 features (time steps) + 1 label column
+# --------------------------------------------------------------------------- #
+# Data / label definitions
+# --------------------------------------------------------------------------- #
+# The MIT-BIH Kaggle CSVs have 187 signal columns + 1 label column.
 N_FEATURES = 187
-# Classes based on AAMI standard mapping used in the common Kaggle dataset:
-# 0: N (Normal beat)
-# 1: S (Supraventricular ectopic beat)
-# 2: V (Ventricular ectopic beat)
-# 3: F (Fusion beat)
-# 4: Q (Unknown beat)
 N_CLASSES = 5
-CLASS_MAP = {
-    0: 'N',
-    1: 'S',
-    2: 'V',
-    3: 'F',
-    4: 'Q'
-}
-CLASS_NAMES = ['Normal', 'Supraventricular', 'Ventricular', 'Fusion', 'Unknown']
 
+# AAMI standard mapping used by the Kaggle "heartbeat" dataset.
+CLASS_MAP = {0: "N", 1: "S", 2: "V", 3: "F", 4: "Q"}
+CLASS_NAMES = ["Normal", "Supraventricular", "Ventricular", "Fusion", "Unknown"]
 
-# Training parameters
-EPOCHS = 30 # Adjust as needed
+# --------------------------------------------------------------------------- #
+# Training hyper-parameters
+# --------------------------------------------------------------------------- #
+EPOCHS = 30
 BATCH_SIZE = 128
-LEARNING_RATE = 0.001
-VALIDATION_SPLIT = 0.2 # Percentage of training data to use for validation
+LEARNING_RATE = 1e-3
+WEIGHT_DECAY = 1e-5
+VALIDATION_SPLIT = 0.2          # fraction of training data held out for validation
 
-# Resampling parameters (using SMOTE)
-APPLY_SMOTE = True # Set to False to disable SMOTE
+# Callbacks-style controls
+EARLY_STOPPING_PATIENCE = 10    # stop after N epochs with no val-loss improvement
+LR_PATIENCE = 5                 # ReduceLROnPlateau patience
+LR_FACTOR = 0.2
+MIN_LR = 1e-5
 
-# Random state for reproducibility
+# Class-imbalance handling
+APPLY_SMOTE = True              # set False to train on the raw (imbalanced) data
+
+# Performance
+USE_AMP = True                  # automatic mixed precision (only used on CUDA)
+NUM_WORKERS = 0                 # DataLoader workers; 0 is safest on Windows
+
+# Reproducibility
 RANDOM_STATE = 42
