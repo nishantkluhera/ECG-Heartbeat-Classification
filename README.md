@@ -1,177 +1,237 @@
-# ECG Heartbeat Classification using CNN
+# ECG Heartbeat Classification with a 1D CNN (PyTorch)
 
-This project implements a 1D Convolutional Neural Network (CNN) using TensorFlow/Keras to classify ECG heartbeat signals into different arrhythmia categories based on the AAMI standard. It utilizes a publicly available ECG dataset.
+A deep-learning pipeline that classifies individual heartbeats from raw ECG
+signals into five arrhythmia categories (AAMI standard) using a **1D
+Convolutional Neural Network built in PyTorch**, with **CUDA/GPU acceleration**,
+SMOTE for class imbalance, an interactive Streamlit demo, a test suite, and
+Docker packaging.
+
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.6-ee4c2c)
+![CUDA](https://img.shields.io/badge/CUDA-enabled-76b900)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Table of Contents
-
-- [Project Overview](#project-overview)
+- [Overview](#overview)
+- [Results](#results)
 - [Dataset](#dataset)
 - [Model Architecture](#model-architecture)
 - [Project Structure](#project-structure)
-- [Setup and Installation](#setup-and-installation)
+- [Setup](#setup)
 - [Usage](#usage)
-- [Results](#results)
-- [Contributing](#contributing)
-- [License](#license)
-- [Acknowledgements](#acknowledgements)
+- [Interactive Demo](#interactive-demo)
+- [Testing](#testing)
+- [Docker](#docker)
+- [Design Notes](#design-notes)
+- [License & Acknowledgements](#license--acknowledgements)
 
-## Project Overview
+## Overview
 
-The goal of this project is to automatically classify individual heartbeats from Electrocardiogram (ECG) signals. This is a crucial task in diagnosing cardiac arrhythmias. We use deep learning, specifically a 1D CNN, to learn features directly from the raw ECG signal segments corresponding to individual heartbeats. The model is trained to distinguish between Normal beats and several types of arrhythmic beats.
+Automatically classifying heartbeats is a core task in detecting cardiac
+arrhythmias. This project learns features **directly from the raw single-beat
+waveform** (no hand-crafted features) with a 1D CNN and distinguishes Normal
+beats from four arrhythmia types.
 
-## Dataset
-
-This project uses the **MIT-BIH Arrhythmia Database**, pre-processed and made available in CSV format. A common version is available on Kaggle:
-
-- **Source:** [ECG Heartbeat Categorization Dataset on Kaggle](https://www.kaggle.com/datasets/shayanfazeli/heartbeat) (Derived from PhysioNet's MIT-BIH Arrhythmia Database)
-- **Files:**
-    - `mitbih_train.csv`: Training dataset.
-    - `mitbih_test.csv`: Testing dataset.
-- **Format:** Each row represents a single heartbeat segment. The first 187 columns are the ECG signal values (time steps), and the last column (188th) is the target class label.
-- **Classes:** The labels correspond to the Association for the Advancement of Medical Instrumentation (AAMI) standard categories:
-    - `0`: **N** - Normal beat
-    - `1`: **S** - Supraventricular ectopic beat (SVEB)
-    - `2`: **V** - Ventricular ectopic beat (VEB)
-    - `3`: **F** - Fusion beat
-    - `4`: **Q** - Unknown beat
-
-**Important:** The dataset is known to be highly imbalanced (many Normal beats, fewer arrhythmic ones). This project includes an option to use SMOTE (Synthetic Minority Over-sampling TEchnique) during preprocessing to address this imbalance (see `src/config.py`).
-
-**Download:**
-1. Download the dataset files (`mitbih_train.csv` and `mitbih_test.csv`) from the Kaggle link above.
-2. Place the downloaded CSV files inside the `data/` directory in the project's root folder.
-
-## Model Architecture
-
-The classification model is a 1D Convolutional Neural Network (CNN) built using TensorFlow/Keras. The architecture consists of:
-
-1.  **Input Layer:** Expects segments of shape `(187, 1)`.
-2.  **Convolutional Blocks:** Multiple blocks of `Conv1D`, `BatchNormalization`, `ReLU` activation, `MaxPooling1D`, and `Dropout` layers to extract hierarchical features from the time-series signal.
-3.  **Flatten Layer:** To convert the 3D feature maps into a 1D vector.
-4.  **Dense Blocks:** Fully connected (`Dense`) layers with `BatchNormalization`, `ReLU`, and `Dropout` for further feature processing and regularization.
-5.  **Output Layer:** A `Dense` layer with `N_CLASSES` (5) units and `softmax` activation to output class probabilities.
-
-The model is compiled using the Adam optimizer and categorical cross-entropy loss function. See `src/model.py` for the detailed implementation.
-
-## Project Structure
-ecg-heartbeat-classifier/
-│
-├── .gitignore
-├── README.md
-├── requirements.txt
-│
-├── data/                      # Data files (or instructions to download)
-│   ├── .gitkeep               # Keep directory in git even if empty
-│   └── mitbih_test.csv        # Example: Test dataset
-│   └── mitbih_train.csv       # Example: Training dataset
-│   └── (Download instructions in README)
-│
-├── notebooks/                 # Jupyter notebooks for exploration/visualization (Optional)
-│   ├── 1_Data_Exploration.ipynb
-│   └── 2_Model_Training_Experiments.ipynb
-│
-├── saved_models/              # Trained model files (added to .gitignore)
-│   └── .gitkeep
-│
-├── src/                       # Source code
-│   ├── __init__.py
-│   ├── config.py              # Configuration variables (paths, parameters)
-│   ├── data_loader.py         # Functions to load and preprocess data
-│   ├── model.py               # Model definition (CNN)
-│   ├── train.py               # Script to train the model
-│   ├── evaluate.py            # Script to evaluate the model
-│   └── predict.py             # Script/function for making predictions (Optional)
-│   └── utils.py               # Utility functions (e.g., plotting)
-│
-└── visualizations/            # Saved plots/images (Optional)
-    └── .gitkeep
-    └── confusion_matrix.png
-    └── training_history.png
-## Setup and Installation
-
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/<your-username>/ecg-heartbeat-classifier.git
-    cd ecg-heartbeat-classifier
-    ```
-
-2.  **Create a virtual environment (recommended):**
-    ```bash
-    python -m venv venv
-    # On Windows:
-    venv\Scripts\activate
-    # On macOS/Linux:
-    source venv/bin/activate
-    ```
-
-3.  **Install dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-    *Note: This will install TensorFlow. If you don't have a compatible GPU and CUDA installed, consider using `tensorflow-cpu` instead by modifying `requirements.txt` before installing.*
-
-4.  **Download the dataset:**
-    - Go to the [Kaggle dataset page](https://www.kaggle.com/datasets/shayanfazeli/heartbeat).
-    - Download `mitbih_train.csv` and `mitbih_test.csv`.
-    - Place these files inside the `data/` directory.
-
-## Usage
-
-1.  **Configure Parameters (Optional):**
-    - Edit `src/config.py` to adjust parameters like `EPOCHS`, `BATCH_SIZE`, `LEARNING_RATE`, or `APPLY_SMOTE`.
-
-2.  **Train the Model:**
-    - Run the training script from the project root directory:
-      ```bash
-      python src/train.py
-      ```
-    - This script will:
-        - Load and preprocess the data (applying SMOTE if enabled in `config.py`).
-        - Build the CNN model.
-        - Train the model using the training data, validating on a split portion.
-        - Save the best model found during training (based on validation accuracy) to the `saved_models/` directory.
-        - Save plots of the training/validation accuracy and loss curves to the `visualizations/` directory.
-
-3.  **Evaluate the Model:**
-    - After training, evaluate the saved model on the test set:
-      ```bash
-      python src/evaluate.py
-      ```
-    - This script will:
-        - Load the test data and the saved model.
-        - Preprocess the test data (using the same scaler parameters as training).
-        - Make predictions on the test set.
-        - Print a classification report (precision, recall, F1-score per class).
-        - Save a confusion matrix plot to the `visualizations/` directory.
-
-4.  **Make Predictions (Example):**
-    - Use the `src/predict.py` script to load the model and predict the class for a new ECG segment (example uses dummy data or a sample from the test set):
-      ```bash
-      python src/predict.py
-      ```
-    - You can adapt the `predict_heartbeat` function in `src/predict.py` to integrate it into other applications.
+**Highlights**
+- 🧠 **PyTorch 1D-CNN** — 3 convolutional blocks + a dense classifier head.
+- ⚡ **GPU training** — CUDA with automatic mixed precision (AMP).
+- ⚖️ **Class-imbalance handling** — SMOTE oversampling of minority classes.
+- 🔁 **Correct inference** — the fitted `StandardScaler` is saved during
+  training and reused at evaluation/prediction time (no train/serve skew).
+- 🛑 **Robust training loop** — early stopping, `ReduceLROnPlateau`, and
+  best-checkpoint saving by validation accuracy.
+- 🖥️ **Streamlit demo**, ✅ **pytest suite**, and 🐳 **Dockerfile**.
 
 ## Results
 
-After running the evaluation script (`src/evaluate.py`), the following outputs are generated:
+Trained for 30 epochs on an NVIDIA RTX 3060 (CUDA, mixed precision) in ~8
+minutes. Best validation accuracy **99.78%**. On the held-out test set
+(21,892 beats):
 
--   **Console Output:** Detailed classification report showing precision, recall, and F1-score for each heartbeat class, along with overall accuracy.
--   **`visualizations/confusion_matrix.png`:** A heatmap visualizing the model's predictions against the true labels for the test set. This helps identify which classes the model confuses.
--   **`visualizations/training_history.png`:** Plots showing the model's accuracy and loss on the training and validation sets over epochs during training. Helps diagnose overfitting or underfitting.
+| Metric | Value |
+|---|---|
+| **Test accuracy** | **98.49%** |
+| Weighted F1 | 0.985 |
+| Macro F1 | 0.917 |
 
-*(Optionally, add a summary of your specific results here after running the code, e.g., "The model achieved an overall accuracy of ~XX.X% on the test set. Performance was highest for Normal beats and lowest for Fusion beats, as expected due to class imbalance and morphological similarity...")*
+Per-class performance (test set):
 
-## Contributing
+| Class | Precision | Recall | F1 | Support |
+|---|---|---|---|---|
+| Normal           | 0.995 | 0.990 | 0.992 | 18,118 |
+| Supraventricular | 0.817 | 0.876 | 0.846 |    556 |
+| Ventricular      | 0.960 | 0.966 | 0.963 |  1,448 |
+| Fusion           | 0.725 | 0.864 | 0.789 |    162 |
+| Unknown          | 0.993 | 0.993 | 0.993 |  1,608 |
 
-Contributions are welcome! Please feel free to submit a Pull Request or open an Issue for bugs, feature requests, or improvements.
+As expected, the rare minority classes (Supraventricular, Fusion) are hardest;
+SMOTE substantially improves their recall versus training on the raw imbalance.
 
-## License
+Reproduce with `python main.py train && python main.py evaluate`.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details (You would need to add a LICENSE file, e.g., containing the standard MIT License text).
+| Training history | Confusion matrix |
+|---|---|
+| ![history](visualizations/training_history.png) | ![cm](visualizations/confusion_matrix.png) |
 
-## Acknowledgements
+## Dataset
 
--   This project uses the [MIT-BIH Arrhythmia Database](https://physionet.org/content/mitdb/1.0.0/).
-    - Moody GB, Mark RG. The impact of the MIT-BIH Arrhythmia Database. IEEE Eng Med Biol Mag. 2001 May-Jun;20(3):45-50. PMID: 11446249.
-    - Goldberger AL, Amaral LAN, Glass L, Hausdorff JM, Ivanov PCh, Mark RG, Mietus JE, Moody GB, Peng C-K, Stanley HE. PhysioBank, PhysioToolkit, and PhysioNet: Components of a New Research Resource for Complex Physiologic Signals. Circulation 101(23):e215-e220 [Circulation Electronic Pages; http://circ.ahajournals.org/content/101/23/e215.full]; 2000 (June 13). PMID: 10851218.
--   Dataset pre-processing inspiration from the Kaggle dataset by Shayan Fazeli.
+**MIT-BIH Arrhythmia Database**, pre-processed into fixed-length beats and
+distributed as CSV on Kaggle.
+
+- **Source:** [ECG Heartbeat Categorization Dataset (Kaggle)](https://www.kaggle.com/datasets/shayanfazeli/heartbeat)
+- **Files:** `mitbih_train.csv` (87,554 beats), `mitbih_test.csv` (21,892 beats)
+- **Format:** each row = one heartbeat. Columns `0..186` are the signal
+  (normalised to `[0, 1]`, zero-padded to 187 samples); column `187` is the label.
+- **Classes (AAMI):** `0` Normal · `1` Supraventricular · `2` Ventricular ·
+  `3` Fusion · `4` Unknown. The data is **heavily imbalanced** (mostly Normal),
+  which SMOTE addresses during training.
+
+**Download:** grab both CSVs from the Kaggle link and place them in `data/`:
+```
+data/mitbih_train.csv
+data/mitbih_test.csv
+```
+(The CSVs are ~490 MB total and are git-ignored, not committed.)
+
+## Model Architecture
+
+`src/model.py` — `ECGCNN(nn.Module)`; input `(batch, 1, 187)`, output 5 logits.
+
+```
+Input (1 × 187)
+ ├─ Conv1d(1→64, k=5, same)  → BatchNorm → ReLU → MaxPool(2) → Dropout(0.2)
+ ├─ Conv1d(64→128, k=5, same)→ BatchNorm → ReLU → MaxPool(2) → Dropout(0.3)
+ ├─ Conv1d(128→256, k=3,same)→ BatchNorm → ReLU → MaxPool(2) → Dropout(0.3)
+ ├─ Flatten
+ ├─ Linear(→256) → BatchNorm → ReLU → Dropout(0.4)
+ └─ Linear(256→5)  (softmax applied at inference)
+```
+
+Loss: `CrossEntropyLoss`. Optimizer: `Adam` (lr `1e-3`, weight decay `1e-5`).
+Scheduler: `ReduceLROnPlateau`. Mixed precision on CUDA via `torch.amp`.
+
+## Project Structure
+
+```
+ECG-Heartbeat-Classification/
+├── main.py                  # CLI entry point (train / evaluate / predict)
+├── requirements.txt
+├── pyproject.toml           # installable package + console script
+├── Dockerfile / .dockerignore
+├── conftest.py
+├── data/                    # MIT-BIH CSVs (download; git-ignored)
+├── saved_models/            # checkpoint (.pt) + scaler (.joblib) [git-ignored]
+├── visualizations/          # training_history.png, confusion_matrix.png
+├── notebooks/
+│   └── 1_Data_Exploration.ipynb
+├── app/
+│   └── streamlit_app.py     # interactive demo
+├── src/
+│   ├── config.py            # paths & hyper-parameters
+│   ├── data_loader.py       # load, scale (+save scaler), SMOTE, torch Dataset
+│   ├── model.py             # ECGCNN + checkpoint load/save
+│   ├── train.py             # training loop (AMP, early stop, scheduler)
+│   ├── evaluate.py          # test-set metrics + confusion matrix
+│   ├── predict.py           # single-beat inference
+│   ├── utils.py             # seeding, device, plotting, reports
+│   └── cli.py               # argparse CLI
+└── tests/                   # pytest suite
+```
+
+## Setup
+
+Requires **Python 3.11**. For GPU training you need an NVIDIA GPU + recent driver.
+
+```bash
+# 1. Create and activate a virtual environment
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# macOS/Linux:
+source .venv/bin/activate
+
+# 2a. GPU (CUDA 12.4) — recommended if you have an NVIDIA GPU
+pip install torch --index-url https://download.pytorch.org/whl/cu124
+pip install -r requirements.txt
+
+# 2b. CPU-only alternative
+pip install -r requirements.txt
+```
+
+Verify CUDA is picked up:
+```bash
+python -c "import torch; print('CUDA available:', torch.cuda.is_available())"
+```
+
+## Usage
+
+All commands run from the project root via `main.py`:
+
+```bash
+# Train (saves best checkpoint + scaler to saved_models/, plots to visualizations/)
+python main.py train                 # 30 epochs (configurable in src/config.py)
+python main.py train --epochs 10     # shorter run
+
+# Evaluate on the test set (prints per-class report, saves confusion matrix)
+python main.py evaluate
+
+# Classify a single heartbeat from the test set
+python main.py predict --sample-index 100
+```
+
+After `pip install -e .` you can also use the `ecg-classify` console script
+(`ecg-classify train`, etc.).
+
+## Interactive Demo
+
+A Streamlit app lets you pick a test beat (or a random segment), view the
+waveform, and see predicted class probabilities:
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+## Testing
+
+```bash
+pytest -q
+```
+Tests cover preprocessing/scaler round-trips, SMOTE balancing, the model's
+forward/backward pass, and checkpoint save/load. Tests that need PyTorch skip
+cleanly if it isn't installed.
+
+## Docker
+
+```bash
+# Build
+docker build -t ecg-classifier .
+
+# Run the demo (mount data + a trained model)
+docker run --rm -p 8501:8501 \
+  -v ${PWD}/data:/app/data \
+  -v ${PWD}/saved_models:/app/saved_models \
+  ecg-classifier
+
+# Or train inside the container
+docker run --rm -v ${PWD}/data:/app/data -v ${PWD}/saved_models:/app/saved_models \
+  ecg-classifier python main.py train
+```
+
+## Design Notes
+
+- **No train/serve skew.** Earlier versions re-fit the scaler at inference on
+  raw data, scaling inputs differently than the model was trained on. Here the
+  scaler is fit once, **saved with `joblib`**, and reloaded everywhere.
+- **SMOTE in the scaled space.** Features are standardised before SMOTE so the
+  oversampler's nearest-neighbour distances are well-behaved.
+- **Reproducibility.** A single `set_seed` seeds Python, NumPy and PyTorch
+  (incl. CUDA).
+- **Config-driven.** All paths and hyper-parameters live in `src/config.py`.
+
+## License & Acknowledgements
+
+Licensed under the **MIT License** — see [LICENSE](LICENSE).
+
+- MIT-BIH Arrhythmia Database — Moody GB, Mark RG, *IEEE Eng Med Biol Mag*, 2001.
+- Goldberger AL et al., *PhysioBank, PhysioToolkit, and PhysioNet*, Circulation, 2000.
+- Kaggle dataset preparation by Shayan Fazeli.

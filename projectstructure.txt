@@ -1,33 +1,48 @@
-ecg-heartbeat-classifier/
+ECG-Heartbeat-Classification/
 │
 ├── .gitignore
+├── .dockerignore
+├── LICENSE
 ├── README.md
 ├── requirements.txt
+├── pyproject.toml            # installable package + `ecg-classify` console script
+├── Dockerfile
+├── conftest.py               # makes `src` importable in tests
+├── main.py                   # CLI entry point: train / evaluate / predict
 │
-├── data/                      # Data files (or instructions to download)
-│   ├── .gitkeep               # Keep directory in git even if empty
-│   └── mitbih_test.csv        # Example: Test dataset
-│   └── mitbih_train.csv       # Example: Training dataset
-│   └── (Download instructions in README)
+├── data/                     # MIT-BIH CSVs (downloaded; git-ignored)
+│   ├── .gitkeep
+│   ├── mitbih_train.csv
+│   └── mitbih_test.csv
 │
-├── notebooks/                 # Jupyter notebooks for exploration/visualization (Optional)
-│   ├── 1_Data_Exploration.ipynb
-│   └── 2_Model_Training_Experiments.ipynb
+├── saved_models/             # trained checkpoint + fitted scaler (git-ignored)
+│   ├── .gitkeep
+│   ├── ecg_cnn_classifier.pt
+│   └── scaler.joblib
 │
-├── saved_models/              # Trained model files (added to .gitignore)
-│   └── .gitkeep
+├── visualizations/           # result plots (tracked for the README)
+│   ├── .gitkeep
+│   ├── training_history.png
+│   └── confusion_matrix.png
 │
-├── src/                       # Source code
+├── notebooks/
+│   └── 1_Data_Exploration.ipynb
+│
+├── app/
+│   └── streamlit_app.py      # interactive demo
+│
+├── src/                      # source package
 │   ├── __init__.py
-│   ├── config.py              # Configuration variables (paths, parameters)
-│   ├── data_loader.py         # Functions to load and preprocess data
-│   ├── model.py               # Model definition (CNN)
-│   ├── train.py               # Script to train the model
-│   ├── evaluate.py            # Script to evaluate the model
-│   └── predict.py             # Script/function for making predictions (Optional)
-│   └── utils.py               # Utility functions (e.g., plotting)
+│   ├── config.py             # paths & hyper-parameters
+│   ├── data_loader.py        # load, scale (+save scaler), SMOTE, torch Dataset
+│   ├── model.py              # ECGCNN (PyTorch) + checkpoint load/save
+│   ├── train.py              # training loop (AMP, early stopping, scheduler)
+│   ├── evaluate.py           # test-set metrics + confusion matrix
+│   ├── predict.py            # single-heartbeat inference
+│   ├── utils.py              # seeding, device, plotting, reporting
+│   └── cli.py                # argparse command-line interface
 │
-└── visualizations/            # Saved plots/images (Optional)
-    └── .gitkeep
-    └── confusion_matrix.png
-    └── training_history.png
+└── tests/                    # pytest suite
+    ├── test_config.py
+    ├── test_data_loader.py
+    └── test_model.py
