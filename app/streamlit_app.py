@@ -61,15 +61,29 @@ def render_diagnosis_mode():
             "Digitization still works below so you can preview the pipeline."
         )
 
-    up = st.file_uploader("ECG strip image", type=["png", "jpg", "jpeg", "bmp"])
-    if up is None:
-        st.info("Upload an ECG strip image to begin.")
-        return
-
     import cv2
-    file_bytes = np.frombuffer(up.read(), np.uint8)
-    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-    st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), caption="Uploaded image", use_container_width=True)
+    SAMPLES = {
+        "Normal ECG (sample)": "assets/samples/sample_normal.png",
+        "ST/T change (sample)": "assets/samples/sample_st_t_change.png",
+        "Conduction disturbance (sample)": "assets/samples/sample_conduction_disturbance.png",
+    }
+    source = st.radio("Input", ["Try a sample", "Upload your own"], horizontal=True)
+    img = None
+    if source == "Try a sample":
+        choice = st.selectbox("Sample single-lead ECG strip", list(SAMPLES.keys()))
+        img = cv2.imread(os.path.join(ROOT, SAMPLES[choice]), cv2.IMREAD_COLOR)
+        st.caption("Sample rendered from a real PTB-XL test record (CC-BY 4.0).")
+    else:
+        up = st.file_uploader("ECG strip image", type=["png", "jpg", "jpeg", "bmp"])
+        if up is not None:
+            file_bytes = np.frombuffer(up.read(), np.uint8)
+            img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+
+    if img is None:
+        st.info("Choose a sample or upload an ECG strip image to begin.")
+        return
+    st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), caption="Input ECG image",
+             use_container_width=True)
 
     from src.digitization import digitize_ecg_image
     try:
