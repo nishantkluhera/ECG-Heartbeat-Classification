@@ -1,48 +1,39 @@
 ECG-Heartbeat-Classification/
 │
-├── .gitignore
-├── .dockerignore
-├── LICENSE
-├── README.md
-├── requirements.txt
-├── pyproject.toml            # installable package + `ecg-classify` console script
-├── Dockerfile
-├── conftest.py               # makes `src` importable in tests
-├── main.py                   # CLI entry point: train / evaluate / predict
+├── .gitignore  .dockerignore  LICENSE  README.md
+├── requirements.txt  pyproject.toml  Dockerfile  conftest.py
+├── main.py                   # CLI: train / evaluate / predict / diagnose-train / diagnose-eval / diagnose-image
 │
-├── data/                     # MIT-BIH CSVs (downloaded; git-ignored)
-│   ├── .gitkeep
-│   ├── mitbih_train.csv
-│   └── mitbih_test.csv
+├── .streamlit/
+│   └── config.toml           # demo theme / upload limit
 │
-├── saved_models/             # trained checkpoint + fitted scaler (git-ignored)
-│   ├── .gitkeep
-│   ├── ecg_cnn_classifier.pt
-│   └── scaler.joblib
+├── scripts/
+│   └── get_ptbxl.py          # PTB-XL download + 100 Hz extraction
 │
-├── visualizations/           # result plots (tracked for the README)
-│   ├── .gitkeep
-│   ├── training_history.png
-│   └── confusion_matrix.png
+├── data/                     # datasets (git-ignored)
+│   ├── mitbih_train.csv  mitbih_test.csv      # MIT-BIH (Kaggle)
+│   └── ptbxl/                                 # PTB-XL (PhysioNet) + cache/
 │
+├── saved_models/             # checkpoints + scaler (git-ignored except deployed models)
+├── visualizations/           # result plots (tracked)
 ├── notebooks/
 │   └── 1_Data_Exploration.ipynb
 │
 ├── app/
-│   └── streamlit_app.py      # interactive demo
+│   └── streamlit_app.py      # image diagnosis + beat classifier (with disclaimers)
 │
 ├── src/                      # source package
-│   ├── __init__.py
-│   ├── config.py             # paths & hyper-parameters
-│   ├── data_loader.py        # load, scale (+save scaler), SMOTE, torch Dataset
-│   ├── model.py              # ECGCNN (PyTorch) + checkpoint load/save
-│   ├── train.py              # training loop (AMP, early stopping, scheduler)
-│   ├── evaluate.py           # test-set metrics + confusion matrix
-│   ├── predict.py            # single-heartbeat inference
+│   ├── config.py             # MIT-BIH beat-classifier config
+│   ├── data_loader.py        # MIT-BIH preprocessing, scaler persistence, Dataset
+│   ├── model.py              # ECGCNN (beat classifier)
+│   ├── train.py evaluate.py predict.py
 │   ├── utils.py              # seeding, device, plotting, reporting
-│   └── cli.py                # argparse command-line interface
+│   ├── cli.py                # argparse CLI
+│   ├── digitization.py       # ECG strip image -> 1D signal (OpenCV)
+│   ├── diagnose.py           # image -> diagnosis (+ Grad-CAM, disclaimer)
+│   └── diagnostic/           # PTB-XL diagnostic track
+│       ├── config.py  data.py  model.py  train.py  evaluate.py
 │
-└── tests/                    # pytest suite
-    ├── test_config.py
-    ├── test_data_loader.py
-    └── test_model.py
+└── tests/                    # 19 pytest tests
+    ├── test_config.py  test_data_loader.py  test_model.py
+    ├── test_digitization.py  test_diagnostic_model.py
