@@ -63,28 +63,40 @@ RTX 3060:
 | Test accuracy | **98.49%** |
 | Weighted F1 | 0.985 |
 
-**Diagnostic model (PTB‑XL, 5 diagnostic superclasses)** — 1D‑ResNet,
-multi‑label, trained on the official folds (1–8 train / 9 val / 10 test):
+**Diagnostic model (PTB‑XL, 5 diagnostic superclasses)** — multi‑label,
+trained on the **official folds** (1–8 train / 9 val / 10 test), so numbers are
+directly comparable to the published benchmark. Macro‑AUROC on the test fold:
 
-| Configuration | Test macro‑AUROC |
+| Model | Test macro‑AUROC |
 |---|---|
-| **12‑lead** (benchmark) | **0.924** |
-| **Single‑lead** (Lead II, used by the image demo) | **0.848** |
+| 1D‑ResNet (single model, no augmentation) | 0.924 |
+| Augmented single models (resnet1d / inception1d) | ~0.930 |
+| **Ensemble** (3 architectures × 2 seeds) | **0.9352** |
+| **Ensemble + test‑time augmentation** | **0.9354** |
+| Single‑lead (Lead II) single model — used by the image demo | 0.848 |
 
-Per‑class test AUROC:
+**How this compares to the literature** (PTB‑XL superdiagnostic, same folds):
 
-| Class | 12‑lead | Single‑lead (II) |
+| Method | Macro‑AUROC | |
 |---|---|---|
-| Normal (NORM)            | 0.948 | 0.900 |
-| Myocardial Infarction    | 0.918 | 0.811 |
-| ST/T Change (STTC)       | 0.934 | 0.877 |
-| Conduction Disturbance   | 0.917 | 0.847 |
-| Hypertrophy (HYP)        | 0.902 | 0.805 |
+| resnet1d_wang (best published *single* CNN) | 0.930 | [benchmark](https://github.com/helme/ecg_ptbxl_benchmarking) |
+| **This project — ensemble + TTA** | **0.935** | — |
+| S4 / structured state‑space model (architecture SOTA) | ~0.94 | [Mehari & Strodthoff](https://arxiv.org/abs/2308.15291) |
 
-The 12‑lead result is competitive with published PTB‑XL benchmarks (~0.93
-macro‑AUROC). **Single‑lead screening is inherently less reliable** than a full
-12‑lead read — e.g. many infarctions are not visible in Lead II alone — so the
-app states this explicitly and recommends clinician review.
+Per‑class test AUROC (ensemble + TTA): Normal 0.954 · MI 0.937 · ST/T 0.941 ·
+Conduction 0.928 · Hypertrophy 0.918.
+
+**Honest framing.** The augmented *single* models already match the best
+published *single* CNN (~0.93); the **ensemble + TTA reaches 0.935**, exceeding
+the best single‑model benchmark via standard ensembling. The current
+*architecture* SOTA (~0.94) uses Structured State‑Space Models (S4) with
+self‑supervised pre‑training — the natural next step. Every number is the test
+fold read **once**, with model selection only on the validation fold (no test
+leakage). Reproduce with `python scripts/train_ensemble.py`.
+
+**Single‑lead screening is inherently less reliable** than a full 12‑lead read —
+e.g. many infarctions are not visible in Lead II alone — so the app states this
+explicitly and recommends clinician review.
 
 ## Datasets
 

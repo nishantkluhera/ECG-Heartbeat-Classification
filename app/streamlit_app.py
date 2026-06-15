@@ -91,8 +91,8 @@ def hero():
       calibrated estimate across five diagnostic categories, with an explanation
       of what the model looked at.</p>
       <div class="badges">
-        <span class="badge">PyTorch · 1D-ResNet</span>
-        <span class="badge">PTB-XL · 0.92 macro-AUROC</span>
+        <span class="badge">PyTorch · CNN ensemble</span>
+        <span class="badge">PTB-XL · 0.935 macro-AUROC</span>
         <span class="badge">OpenCV digitization</span>
         <span class="badge">Grad-CAM explainability</span>
         <span class="badge">Calibrated probabilities</span>
@@ -128,13 +128,12 @@ def model_card_sidebar():
     st.sidebar.markdown("#### Model card")
     st.sidebar.markdown("""
     <div class="mc">
-      <b>Architecture</b>: 1D-ResNet (~3.8M params)<br>
+      <b>Models</b>: 1D-ResNet / resnet1d_wang / inception1d<br>
       <b>Training data</b>: PTB-XL (21,799 clinical ECGs)<br>
       <b>Task</b>: multi-label, 5 superclasses<br>
-      <b>Test macro-AUROC</b>: 0.85 single-lead · 0.92 12-lead<br>
-      <b>Input (demo)</b>: lead II, 10 s @ 100 Hz<br>
-      <b>Calibration</b>: temperature-scaled<br>
-      <b>Digitization</b>: OpenCV, grid → mV
+      <b>Best 12-lead</b>: <b>0.935</b> macro-AUROC (ensemble + TTA)<br>
+      <b>This demo</b>: single-lead II, 0.85 macro-AUROC<br>
+      <b>Calibration</b>: temperature-scaled · <b>Digitization</b>: OpenCV → mV
     </div>
     """, unsafe_allow_html=True)
     st.sidebar.markdown(f"[📦 Source code on GitHub]({REPO_URL})")
