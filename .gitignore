@@ -169,6 +169,8 @@ cython_debug/
 data/*.csv
 **/mitbih_*.csv
 src/data/
+# PTB-XL clinical dataset (~0.6-3 GB) - downloaded from PhysioNet, never committed.
+data/ptbxl/
 
 # Trained model checkpoints and the fitted scaler (regenerable via training).
 saved_models/*.pt

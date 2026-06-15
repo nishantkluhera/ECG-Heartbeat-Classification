@@ -1,11 +1,16 @@
 # Core scientific stack
 numpy>=1.23
 pandas>=1.5
+scipy>=1.10              # signal resampling for digitization
 scikit-learn>=1.1
 imbalanced-learn>=0.10   # SMOTE for class imbalance
 matplotlib>=3.6
 seaborn>=0.12
 joblib>=1.2              # persist the fitted StandardScaler
+
+# ECG image digitization + PTB-XL data
+opencv-python-headless>=4.7   # image -> signal digitization
+wfdb>=4.1                     # read PTB-XL WFDB records (diagnostic training only)
 
 # Deep learning (PyTorch)
 # NOTE: the line below installs the CPU build from PyPI. For NVIDIA GPU
