@@ -98,6 +98,38 @@ leakage). Reproduce with `python scripts/train_ensemble.py`.
 e.g. many infarctions are not visible in Lead II alone — so the app states this
 explicitly and recommends clinician review.
 
+## Clinical reality — why a high AUROC is *not* a deployable model
+
+AUROC is a *ranking* metric and is not a deployment criterion. Evaluating the
+ensemble at a clinically meaningful operating point (**sensitivity ≥ 0.90** — you
+can't miss disease) tells a much soberer story (`scripts/clinical_eval.py`):
+
+| Class | AUROC | AUPRC | Specificity | PPV @ test prev. | **PPV @ 5% screening** |
+|---|---|---|---|---|---|
+| Normal | 0.954 | 0.936 | 0.87 | 0.84 | 0.26 |
+| Myocardial Infarction | 0.936 | 0.856 | 0.81 | 0.61 | 0.20 |
+| ST/T Change | 0.941 | 0.835 | 0.84 | 0.63 | 0.22 |
+| Conduction Disturbance | 0.928 | 0.846 | 0.80 | 0.57 | 0.19 |
+| Hypertrophy | 0.918 | **0.697** | 0.74 | 0.32 | **0.16** |
+
+What this means, honestly:
+- **The base‑rate cliff.** At a realistic screening prevalence (~5%), positive
+  predictive value collapses to **0.16–0.26** — i.e. **74–84% of "positives"
+  would be false alarms**. A tool that cries wolf that often is not usable.
+- **AUROC hides imbalance.** Hypertrophy's AUPRC (0.70) is far below its AUROC
+  (0.92); the rarer the finding, the bigger the gap.
+- **Population shift.** PTB‑XL is *already‑referred* clinical patients. On a
+  general population (lower prevalence, different devices, noisier signals) it
+  would do worse.
+- **Label‑noise ceiling.** PTB‑XL labels carry inter‑cardiologist disagreement,
+  so ~0.93–0.94 macro‑AUROC is near the practical ceiling — chasing higher on
+  this dataset largely fits noise.
+
+**Bottom line:** this is a strong *machine‑learning* result at the benchmark
+ceiling, and a deliberately *not* clinically deployable one. The point of this
+section is the literacy: knowing that 0.935 AUROC ≠ a medical device, and showing
+the math. Calibration (Brier ≈ 0.09) is reasonable but secondary to the above.
+
 ## Datasets
 
 | Dataset | Used for | Notes |
