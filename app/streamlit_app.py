@@ -31,40 +31,50 @@ SHORT_DISCLAIMER = ("Research & educational demo — not a medical device, not a
 def inject_css():
     st.markdown("""
     <style>
+      .stApp { background:
+        radial-gradient(1200px 600px at 80% -10%, #16203a 0%, rgba(11,16,32,0) 55%),
+        radial-gradient(900px 500px at -10% 0%, #141a36 0%, rgba(11,16,32,0) 50%), #0b1020; }
       .block-container { max-width: 940px; padding-top: 1.2rem; padding-bottom: 2rem; }
       header[data-testid="stHeader"] { background: transparent; }
+      /* bordered containers -> elevated dark cards */
+      div[data-testid="stVerticalBlockBorderWrapper"] {
+        background:#121a2e; border:1px solid #25304d !important; border-radius:14px; }
       .hero { background: linear-gradient(135deg,#0ea5e9 0%,#6366f1 100%);
               color:#fff; border-radius:18px; padding:24px 28px; margin-bottom:14px;
-              box-shadow:0 10px 30px -12px rgba(99,102,241,.5); }
+              box-shadow:0 16px 44px -16px rgba(99,102,241,.7); }
       .hero h1 { margin:0; font-size:1.7rem; font-weight:800; letter-spacing:-.02em; }
-      .hero p { margin:.4rem 0 0; opacity:.95; font-size:.96rem; max-width:660px; }
+      .hero p { margin:.4rem 0 0; opacity:.96; font-size:.96rem; max-width:660px; }
       .badges { margin-top:14px; display:flex; gap:8px; flex-wrap:wrap; }
-      .badge { background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.28);
+      .badge { background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.26);
                color:#fff; padding:4px 11px; border-radius:999px; font-size:.72rem; font-weight:600; }
-      .notice { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412;
-                border-radius:12px; padding:11px 14px; font-size:.83rem; margin-bottom:14px; }
+      .notice { background:rgba(245,158,11,.10); border:1px solid rgba(245,158,11,.30);
+                color:#fcd34d; border-radius:12px; padding:11px 14px; font-size:.83rem;
+                margin-bottom:14px; }
+      .notice b { color:#fde68a; }
       .sec { font-size:.74rem; text-transform:uppercase; letter-spacing:.07em;
-             color:#64748b; font-weight:700; margin-bottom:.4rem; }
-      .topcard { border:1px solid #e6e9ef; border-left:5px solid #6366f1; border-radius:14px;
-                 padding:16px 20px; margin:4px 0 12px; background:#fbfbfe; }
-      .topcard .lbl { color:#64748b; font-size:.74rem; text-transform:uppercase;
+             color:#8b9bb4; font-weight:700; margin-bottom:.4rem; }
+      .topcard { background:#121a2e; border:1px solid #25304d; border-left:5px solid #818cf8;
+                 border-radius:14px; padding:16px 20px; margin:4px 0 12px; }
+      .topcard .lbl { color:#8b9bb4; font-size:.74rem; text-transform:uppercase;
                       letter-spacing:.07em; font-weight:700; }
-      .topcard .val { font-size:1.5rem; font-weight:800; color:#0f172a; margin-top:3px; }
+      .topcard .val { font-size:1.5rem; font-weight:800; color:#f1f5f9; margin-top:3px; }
       .chip { display:inline-block; padding:3px 11px; border-radius:999px;
               font-size:.74rem; font-weight:700; vertical-align:middle; }
-      .chip-ok { background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; }
-      .chip-warn { background:#fffbeb; color:#b45309; border:1px solid #fde68a; }
-      .chip-info { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
-      .pcard { border:1px solid #e6e9ef; border-radius:14px; padding:14px 18px; margin-bottom:12px; }
+      .chip-ok { background:rgba(16,185,129,.14); color:#34d399; border:1px solid rgba(16,185,129,.4); }
+      .chip-warn { background:rgba(245,158,11,.14); color:#fbbf24; border:1px solid rgba(245,158,11,.4); }
+      .chip-info { background:rgba(129,140,248,.16); color:#a5b4fc; border:1px solid rgba(129,140,248,.45); }
+      .pcard { background:#121a2e; border:1px solid #25304d; border-radius:14px;
+               padding:14px 18px; margin-bottom:12px; }
       .prow { display:flex; align-items:center; gap:12px; margin:9px 0; }
-      .plabel { width:200px; font-size:.86rem; color:#0f172a; font-weight:500; }
-      .ptrack { flex:1; height:11px; background:#f1f5f9; border-radius:999px; overflow:hidden; }
+      .plabel { width:200px; font-size:.86rem; color:#dbe2f0; font-weight:500; }
+      .ptrack { flex:1; height:11px; background:#1e2742; border-radius:999px; overflow:hidden; }
       .pfill { height:100%; border-radius:999px; }
       .pval { width:48px; text-align:right; font-variant-numeric:tabular-nums;
-              font-size:.84rem; color:#475569; font-weight:600; }
-      .foot { color:#94a3b8; font-size:.78rem; text-align:center; margin-top:18px; }
-      .mc { font-size:.83rem; color:#334155; line-height:1.55; }
-      .mc b { color:#0f172a; }
+              font-size:.84rem; color:#9fb0cc; font-weight:600; }
+      .foot { color:#64748b; font-size:.78rem; text-align:center; margin-top:18px; }
+      .foot a { color:#a5b4fc; }
+      .mc { font-size:.83rem; color:#c3ccde; line-height:1.55; }
+      .mc b { color:#f1f5f9; }
     </style>
     """, unsafe_allow_html=True)
 
