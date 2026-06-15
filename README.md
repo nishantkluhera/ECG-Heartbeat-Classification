@@ -19,8 +19,12 @@ A PyTorch, GPU‑accelerated ECG analysis project with **two models** and an
 
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.6%20%2B%20CUDA-ee4c2c)
-![Tests](https://img.shields.io/badge/tests-19%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-27%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
+
+<p align="center">
+  <img src="assets/demo_screenshot.png" alt="ECG Insight demo: ECG image to calibrated diagnosis" width="540">
+</p>
 
 ## Table of Contents
 - [Pipeline](#pipeline)
