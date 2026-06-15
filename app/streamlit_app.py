@@ -1,9 +1,8 @@
-"""Interactive ECG analysis demo (Streamlit).
+"""ECG Insight - interactive ECG analysis demo (Streamlit).
 
-Two modes:
-  1. Clinical diagnosis from an ECG image  (upload a single-lead strip ->
-     digitize -> PTB-XL diagnostic model -> calibrated findings + saliency)
-  2. Heartbeat type classifier             (MIT-BIH single-beat CNN)
+A polished front-end for two models:
+  1. Diagnostic screening from an ECG image  (digitize -> PTB-XL 1D-ResNet)
+  2. Heartbeat-type classification           (MIT-BIH single-beat CNN)
 
 EDUCATIONAL / RESEARCH ONLY - not a medical device, not a diagnosis.
 """
@@ -18,26 +17,117 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="ECG Analyzer", page_icon="🫀", layout="centered")
+st.set_page_config(page_title="ECG Insight — AI ECG Screening", page_icon="🫀",
+                   layout="wide", initial_sidebar_state="expanded")
 
-DISCLAIMER = (
-    "**⚠️ Educational / research use only.** This is **not** a medical device, "
-    "does **not** provide a diagnosis, and can be wrong. ECG interpretation must "
-    "be done by a qualified clinician. A doctor's opinion always comes first — "
-    "if you have any health concern, seek professional medical care."
-)
+REPO_URL = "https://github.com/nishantkluhera/ECG-Heartbeat-Classification"
+SHORT_DISCLAIMER = ("Research & educational demo — not a medical device, not a diagnosis. "
+                    "Always consult a qualified clinician.")
 
 
-def disclaimer_banner():
-    st.error(DISCLAIMER)
+# --------------------------------------------------------------------------- #
+# Design system
+# --------------------------------------------------------------------------- #
+def inject_css():
+    st.markdown("""
+    <style>
+      .block-container { max-width: 940px; padding-top: 1.2rem; padding-bottom: 2rem; }
+      header[data-testid="stHeader"] { background: transparent; }
+      .hero { background: linear-gradient(135deg,#0ea5e9 0%,#6366f1 100%);
+              color:#fff; border-radius:18px; padding:24px 28px; margin-bottom:14px;
+              box-shadow:0 10px 30px -12px rgba(99,102,241,.5); }
+      .hero h1 { margin:0; font-size:1.7rem; font-weight:800; letter-spacing:-.02em; }
+      .hero p { margin:.4rem 0 0; opacity:.95; font-size:.96rem; max-width:660px; }
+      .badges { margin-top:14px; display:flex; gap:8px; flex-wrap:wrap; }
+      .badge { background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.28);
+               color:#fff; padding:4px 11px; border-radius:999px; font-size:.72rem; font-weight:600; }
+      .notice { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412;
+                border-radius:12px; padding:11px 14px; font-size:.83rem; margin-bottom:14px; }
+      .sec { font-size:.74rem; text-transform:uppercase; letter-spacing:.07em;
+             color:#64748b; font-weight:700; margin-bottom:.4rem; }
+      .topcard { border:1px solid #e6e9ef; border-left:5px solid #6366f1; border-radius:14px;
+                 padding:16px 20px; margin:4px 0 12px; background:#fbfbfe; }
+      .topcard .lbl { color:#64748b; font-size:.74rem; text-transform:uppercase;
+                      letter-spacing:.07em; font-weight:700; }
+      .topcard .val { font-size:1.5rem; font-weight:800; color:#0f172a; margin-top:3px; }
+      .chip { display:inline-block; padding:3px 11px; border-radius:999px;
+              font-size:.74rem; font-weight:700; vertical-align:middle; }
+      .chip-ok { background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; }
+      .chip-warn { background:#fffbeb; color:#b45309; border:1px solid #fde68a; }
+      .chip-info { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
+      .pcard { border:1px solid #e6e9ef; border-radius:14px; padding:14px 18px; margin-bottom:12px; }
+      .prow { display:flex; align-items:center; gap:12px; margin:9px 0; }
+      .plabel { width:200px; font-size:.86rem; color:#0f172a; font-weight:500; }
+      .ptrack { flex:1; height:11px; background:#f1f5f9; border-radius:999px; overflow:hidden; }
+      .pfill { height:100%; border-radius:999px; }
+      .pval { width:48px; text-align:right; font-variant-numeric:tabular-nums;
+              font-size:.84rem; color:#475569; font-weight:600; }
+      .foot { color:#94a3b8; font-size:.78rem; text-align:center; margin-top:18px; }
+      .mc { font-size:.83rem; color:#334155; line-height:1.55; }
+      .mc b { color:#0f172a; }
+    </style>
+    """, unsafe_allow_html=True)
 
 
-st.title("🫀 ECG Analyzer")
-mode = st.sidebar.radio(
-    "Mode",
-    ["Clinical diagnosis (from ECG image)", "Heartbeat type (MIT-BIH beat)"],
-)
-disclaimer_banner()
+def sec(label):
+    st.markdown(f'<div class="sec">{label}</div>', unsafe_allow_html=True)
+
+
+def hero():
+    st.markdown("""
+    <div class="hero">
+      <h1>🫀 ECG Insight</h1>
+      <p>Deep-learning ECG screening — turn a single-lead ECG strip image into a
+      calibrated estimate across five diagnostic categories, with an explanation
+      of what the model looked at.</p>
+      <div class="badges">
+        <span class="badge">PyTorch · 1D-ResNet</span>
+        <span class="badge">PTB-XL · 0.92 macro-AUROC</span>
+        <span class="badge">OpenCV digitization</span>
+        <span class="badge">Grad-CAM explainability</span>
+        <span class="badge">Calibrated probabilities</span>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="notice"><b>⚠️ {SHORT_DISCLAIMER}</b> '
+                "A doctor's reading always comes first.</div>", unsafe_allow_html=True)
+
+
+def prob_bars_html(findings):
+    rows = []
+    for f in findings:
+        pct = f["probability"] * 100
+        is_normal = f["class"] in ("NORM", "Normal")
+        flagged = f["flagged"] and not is_normal
+        if is_normal:
+            color = "linear-gradient(90deg,#34d399,#10b981)"      # green = normal (good)
+        elif flagged:
+            color = "linear-gradient(90deg,#f59e0b,#ef4444)"      # warm = flagged abnormality
+        else:
+            color = "linear-gradient(90deg,#38bdf8,#6366f1)"      # cool = abnormal, low signal
+        chip = ' <span class="chip chip-warn">review</span>' if flagged else ""
+        rows.append(
+            f'<div class="prow"><div class="plabel">{f["name"]}{chip}</div>'
+            f'<div class="ptrack"><div class="pfill" style="width:{pct:.1f}%;background:{color};"></div></div>'
+            f'<div class="pval">{pct:.0f}%</div></div>'
+        )
+    return '<div class="pcard"><div class="sec">All categories</div>' + "".join(rows) + "</div>"
+
+
+def model_card_sidebar():
+    st.sidebar.markdown("#### Model card")
+    st.sidebar.markdown("""
+    <div class="mc">
+      <b>Architecture</b>: 1D-ResNet (~3.8M params)<br>
+      <b>Training data</b>: PTB-XL (21,799 clinical ECGs)<br>
+      <b>Task</b>: multi-label, 5 superclasses<br>
+      <b>Test macro-AUROC</b>: 0.85 single-lead · 0.92 12-lead<br>
+      <b>Input (demo)</b>: lead II, 10 s @ 100 Hz<br>
+      <b>Calibration</b>: temperature-scaled<br>
+      <b>Digitization</b>: OpenCV, grid → mV
+    </div>
+    """, unsafe_allow_html=True)
+    st.sidebar.markdown(f"[📦 Source code on GitHub]({REPO_URL})")
 
 
 # --------------------------------------------------------------------------- #
@@ -45,45 +135,37 @@ disclaimer_banner()
 # --------------------------------------------------------------------------- #
 def render_diagnosis_mode():
     from src.diagnostic.config import model_path, SIGNAL_LENGTH, SAMPLING_RATE
-    st.subheader("Diagnostic screening from a single-lead ECG image")
-    st.caption(
-        "Upload a clean single-lead ECG strip (screenshot / scan). The image is "
-        "digitized to a waveform, then a PTB-XL-trained 1D-ResNet estimates the "
-        "likelihood of five diagnostic superclasses. Single-lead screening only — "
-        "a full 12-lead ECG read by a clinician is far more reliable."
-    )
+    import cv2
 
     has_model = os.path.exists(model_path("lead2"))
     if not has_model:
-        st.warning(
-            "The diagnostic model isn't trained yet. Once PTB-XL is downloaded, run:\n\n"
-            "```bash\npython main.py diagnose-train --leads lead2\n```\n\n"
-            "Digitization still works below so you can preview the pipeline."
-        )
+        st.warning("Diagnostic model not trained yet. Run "
+                   "`python main.py diagnose-train --leads lead2`. "
+                   "Digitization preview still works below.")
 
-    import cv2
     SAMPLES = {
-        "Normal ECG (sample)": "assets/samples/sample_normal.png",
-        "ST/T change (sample)": "assets/samples/sample_st_t_change.png",
-        "Conduction disturbance (sample)": "assets/samples/sample_conduction_disturbance.png",
+        "Normal ECG": "assets/samples/sample_normal.png",
+        "ST/T change": "assets/samples/sample_st_t_change.png",
+        "Conduction disturbance": "assets/samples/sample_conduction_disturbance.png",
     }
-    source = st.radio("Input", ["Try a sample", "Upload your own"], horizontal=True)
     img = None
-    if source == "Try a sample":
-        choice = st.selectbox("Sample single-lead ECG strip", list(SAMPLES.keys()))
-        img = cv2.imread(os.path.join(ROOT, SAMPLES[choice]), cv2.IMREAD_COLOR)
-        st.caption("Sample rendered from a real PTB-XL test record (CC-BY 4.0).")
-    else:
-        up = st.file_uploader("ECG strip image", type=["png", "jpg", "jpeg", "bmp"])
-        if up is not None:
-            file_bytes = np.frombuffer(up.read(), np.uint8)
-            img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+    with st.container(border=True):
+        sec("1 · Choose an ECG")
+        source = st.radio("Input", ["Try a sample", "Upload your own"],
+                          horizontal=True, label_visibility="collapsed")
+        if source == "Try a sample":
+            choice = st.selectbox("Sample single-lead strip (real PTB-XL test records)",
+                                  list(SAMPLES.keys()))
+            img = cv2.imread(os.path.join(ROOT, SAMPLES[choice]), cv2.IMREAD_COLOR)
+        else:
+            up = st.file_uploader("Upload a single-lead ECG strip (PNG/JPG)",
+                                  type=["png", "jpg", "jpeg", "bmp"])
+            if up is not None:
+                img = cv2.imdecode(np.frombuffer(up.read(), np.uint8), cv2.IMREAD_COLOR)
 
     if img is None:
-        st.info("Choose a sample or upload an ECG strip image to begin.")
+        st.info("Pick a sample or upload an ECG strip to begin.")
         return
-    st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), caption="Input ECG image",
-             use_container_width=True)
 
     from src.digitization import digitize_ecg_image
     try:
@@ -92,31 +174,56 @@ def render_diagnosis_mode():
         st.error(f"Could not digitize the image: {e}")
         return
 
-    st.subheader("Digitized waveform")
-    st.line_chart(pd.DataFrame({"amplitude": dig.signal}))
-    cal = "✅ grid-calibrated (mV)" if dig.calibrated else "⚠️ uncalibrated (shape only)"
-    st.caption(f"Calibration: {cal}")
+    c1, c2 = st.columns(2)
+    with c1:
+        with st.container(border=True):
+            sec("Input image")
+            st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), use_container_width=True)
+    with c2:
+        with st.container(border=True):
+            sec("2 · Digitized waveform")
+            st.line_chart(pd.DataFrame({"mV": dig.signal}), height=190)
+            cal = ('<span class="chip chip-ok">grid-calibrated (mV)</span>' if dig.calibrated
+                   else '<span class="chip chip-warn">uncalibrated — shape only</span>')
+            st.markdown(cal, unsafe_allow_html=True)
 
     if not has_model:
         return
 
-    if st.button("Analyze", type="primary"):
-        from src.diagnose import diagnose_image
-        result = diagnose_image(img, lead_config="lead2", with_saliency=True)
-        if result.get("warning"):
-            st.warning(result["warning"])
+    if st.button("🔬 Analyze ECG", type="primary", use_container_width=True):
+        with st.spinner("Running the diagnostic model…"):
+            from src.diagnose import diagnose_image
+            result = diagnose_image(img, lead_config="lead2", with_saliency=True)
 
-        st.subheader("Diagnostic estimate")
-        for f in result["findings"]:
-            label = f"**{f['name']}**" + ("  🚩" if f["flagged"] else "")
-            st.write(label)
-            st.progress(min(1.0, f["probability"]), text=f"{f['probability']:.1%}")
+        top = result["top"]
+        conf = top["probability"]
+        is_concern = top["flagged"] and top["class"] != "NORM"
+        chip_cls = "chip-warn" if is_concern else "chip-info"
+        chip_txt = "flagged for review" if is_concern else (
+            "likely normal" if top["class"] == "NORM" else "below screening threshold")
+        accent = "#10b981" if top["class"] == "NORM" else ("#ef4444" if is_concern else "#6366f1")
+        st.markdown(f"""
+        <div class="topcard" style="border-left-color:{accent};">
+          <div class="lbl">Most likely category</div>
+          <div class="val">{top['name']}
+            <span class="chip {chip_cls}">{conf:.0%} · {chip_txt}</span>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if result.get("warning"):
+            st.markdown(f'<div class="notice">{result["warning"]}</div>', unsafe_allow_html=True)
+
+        st.markdown(prob_bars_html(result["findings"]), unsafe_allow_html=True)
 
         sal = result.get("saliency")
         if sal is not None:
-            st.subheader("Where the model focused (Grad-CAM)")
-            _plot_saliency(dig.signal, sal)
-        st.info("This is a screening estimate, not a diagnosis. " + DISCLAIMER)
+            with st.expander("🔍 Explainability — where the model focused (Grad-CAM)"):
+                _plot_saliency(result["digitization"]["signal"], sal)
+
+        st.markdown('<div class="notice">This is a <b>single-lead screening estimate</b>, '
+                    'not a diagnosis. A full 12-lead ECG read by a clinician is substantially '
+                    'more reliable.</div>', unsafe_allow_html=True)
 
 
 def _plot_saliency(signal, saliency):
@@ -124,13 +231,15 @@ def _plot_saliency(signal, saliency):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots(figsize=(10, 3))
+    fig, ax = plt.subplots(figsize=(10, 2.6))
     x = np.arange(len(signal))
-    ax.plot(x, signal, color="black", linewidth=1)
-    ax.scatter(x, signal, c=saliency, cmap="Reds", s=6)
-    ax.set_yticks([])
-    ax.set_xlabel("time step")
-    ax.set_title("Saliency (red = more influential)")
+    ax.plot(x, signal, color="#334155", linewidth=1.1, zorder=2)
+    ax.scatter(x, signal, c=saliency, cmap="plasma", s=7, zorder=3)
+    ax.set_yticks([]); ax.set_xticks([])
+    for s in ax.spines.values():
+        s.set_visible(False)
+    ax.set_title("Brighter = more influential for the prediction", fontsize=9, color="#64748b")
+    fig.tight_layout()
     st.pyplot(fig)
     plt.close(fig)
 
@@ -140,13 +249,15 @@ def _plot_saliency(signal, saliency):
 # --------------------------------------------------------------------------- #
 def render_beat_mode():
     from src.config import TEST_CSV, MODEL_PATH, N_FEATURES, CLASS_NAMES
-    st.subheader("Heartbeat type classifier (MIT-BIH)")
-    st.caption("Classifies a single pre-segmented heartbeat into 5 AAMI beat types.")
+
+    st.markdown('<div class="sec">Heartbeat-type classifier · MIT-BIH</div>'
+                '<p class="mc">Classifies a single pre-segmented heartbeat into 5 AAMI '
+                'beat types (Normal, Supraventricular, Ventricular, Fusion, Unknown).</p>',
+                unsafe_allow_html=True)
 
     if not os.path.exists(MODEL_PATH):
         st.warning("Beat model not trained. Run `python main.py train`.")
         return
-
     from src.predict import predict_heartbeat, predict_proba, load_prediction_resources
     if not load_prediction_resources():
         st.error("Could not load the beat model/scaler.")
@@ -161,21 +272,62 @@ def render_beat_mode():
         signal = np.random.rand(N_FEATURES).astype(np.float32)
         actual = None
 
-    st.line_chart(pd.DataFrame({"amplitude": signal}))
-    if st.button("Classify beat", type="primary"):
+    with st.container(border=True):
+        sec("Heartbeat waveform")
+        st.line_chart(pd.DataFrame({"amplitude": signal}), height=190)
+
+    if st.button("Classify beat", type="primary", use_container_width=True):
         name, conf = predict_heartbeat(signal)
         probs = predict_proba(signal)
-        c1, c2 = st.columns(2)
-        c1.metric("Predicted", name, f"{conf:.1%}")
+        findings = [{"name": CLASS_NAMES[i], "class": CLASS_NAMES[i],
+                     "probability": float(probs[i]), "flagged": False}
+                    for i in range(len(CLASS_NAMES))]
+        findings.sort(key=lambda d: d["probability"], reverse=True)
+
+        verdict_html = ""
         if actual is not None:
-            c2.metric("Actual", actual, "✅" if actual == name else "❌")
-        st.bar_chart(pd.DataFrame({"probability": probs}, index=CLASS_NAMES))
+            if actual == name:
+                verdict_html = '<span class="chip chip-ok">✓ matches ground truth</span>'
+            else:
+                verdict_html = f'<span class="chip chip-warn">✗ actual: {actual}</span>'
+        st.markdown(f"""
+        <div class="topcard">
+          <div class="lbl">Predicted beat type</div>
+          <div class="val">{name}
+            <span class="chip chip-info">{conf:.0%}</span> {verdict_html}
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown(prob_bars_html(findings), unsafe_allow_html=True)
 
 
-if mode.startswith("Clinical"):
+# --------------------------------------------------------------------------- #
+# Layout
+# --------------------------------------------------------------------------- #
+inject_css()
+hero()
+
+st.sidebar.title("ECG Insight")
+mode = st.sidebar.radio("Tool", ["🩺 Diagnose from ECG image", "💓 Heartbeat type (MIT-BIH)"])
+st.sidebar.divider()
+model_card_sidebar()
+st.sidebar.divider()
+with st.sidebar.expander("How it works"):
+    st.markdown(
+        "1. **Digitize** the strip image to a 1-D signal (OpenCV: de-grid → trace → mV).\n"
+        "2. **Standardize** and run a **1D-ResNet** trained on PTB-XL.\n"
+        "3. **Temperature-calibrated** probabilities for 5 superclasses.\n"
+        "4. **Grad-CAM** highlights the influential regions.\n\n"
+        "Trained both 12-lead and single-lead; the demo uses single-lead to match the image."
+    )
+
+if mode.startswith("🩺"):
     render_diagnosis_mode()
 else:
     render_beat_mode()
 
-st.divider()
-st.caption("PyTorch · MIT-BIH beat CNN + PTB-XL 1D-ResNet · OpenCV digitization. " + DISCLAIMER)
+st.markdown(
+    f'<div class="foot">Built with PyTorch · OpenCV · Streamlit &nbsp;·&nbsp; '
+    f'<a href="{REPO_URL}">source</a> &nbsp;·&nbsp; {SHORT_DISCLAIMER}</div>',
+    unsafe_allow_html=True,
+)
