@@ -63,15 +63,28 @@ RTX 3060:
 | Test accuracy | **98.49%** |
 | Weighted F1 | 0.985 |
 
-**Diagnostic model (PTB‑XL, 5 diagnostic superclasses)** — 1D‑ResNet, multi‑label:
+**Diagnostic model (PTB‑XL, 5 diagnostic superclasses)** — 1D‑ResNet,
+multi‑label, trained on the official folds (1–8 train / 9 val / 10 test):
 
-| Configuration | Macro AUROC |
+| Configuration | Test macro‑AUROC |
 |---|---|
-| 12‑lead (benchmark) | _pending training run_ |
-| Single‑lead (Lead II, used by the image demo) | _pending training run_ |
+| **12‑lead** (benchmark) | **0.924** |
+| **Single‑lead** (Lead II, used by the image demo) | **0.848** |
 
-> Single‑lead screening is inherently less reliable than a full 12‑lead read —
-> the app states this explicitly and recommends clinician review.
+Per‑class test AUROC:
+
+| Class | 12‑lead | Single‑lead (II) |
+|---|---|---|
+| Normal (NORM)            | 0.948 | 0.900 |
+| Myocardial Infarction    | 0.918 | 0.811 |
+| ST/T Change (STTC)       | 0.934 | 0.877 |
+| Conduction Disturbance   | 0.917 | 0.847 |
+| Hypertrophy (HYP)        | 0.902 | 0.805 |
+
+The 12‑lead result is competitive with published PTB‑XL benchmarks (~0.93
+macro‑AUROC). **Single‑lead screening is inherently less reliable** than a full
+12‑lead read — e.g. many infarctions are not visible in Lead II alone — so the
+app states this explicitly and recommends clinician review.
 
 ## Datasets
 
@@ -155,9 +168,25 @@ python main.py diagnose-image --image path/to/ecg_strip.png
 ```bash
 streamlit run app/streamlit_app.py
 ```
-Mode 1 — upload a single‑lead ECG strip → digitized waveform → calibrated
-diagnostic estimate + Grad‑CAM. Mode 2 — the MIT‑BIH beat classifier. The
-disclaimer is shown on every screen.
+Mode 1 — pick a bundled **sample ECG strip** (or upload your own single‑lead
+strip) → digitized waveform → calibrated diagnostic estimate + Grad‑CAM.
+Mode 2 — the MIT‑BIH beat classifier. The disclaimer is shown on every screen.
+Sample strips live in `assets/samples/` (rendered from real PTB‑XL records).
+
+### Deploy a live public demo (Streamlit Community Cloud)
+
+The repo is deploy‑ready: the demo's model artifacts
+(`saved_models/ecg_cnn_classifier.pt`, `scaler.joblib`,
+`ptbxl_diag_lead2.pt`) are committed, and the **image‑diagnosis mode needs no
+dataset at runtime** — just the model and the uploaded/sample image.
+
+1. Push this repo to GitHub.
+2. Go to [share.streamlit.io](https://share.streamlit.io) → **New app**, pick this
+   repo/branch, set the main file to `app/streamlit_app.py`, and deploy.
+3. Streamlit installs `requirements.txt` (CPU PyTorch) and launches. First build
+   takes a few minutes; afterwards you get a public URL to put on your résumé.
+
+(Hugging Face Spaces works too — create a Streamlit Space and point it at this repo.)
 
 ## Limitations & Responsible Use
 
